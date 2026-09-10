@@ -21,6 +21,7 @@ sealed partial class SshSession
     private readonly CancellationTokenSource _closedCts;  // Used to inform the user when the connection is closed.
     private SshClientSettings? _settings;
     private bool _disposed;
+    private bool _isAuthenticated;                         // Set when the user authentication completed successfully
     private Channel<Packet>? _sendQueue;              // Multiple senders push into the queue
     private Task? _runningConnectionTask;                  // Task that encompasses all operations
     private Exception? _abortReason;                       // Reason why the client stopped

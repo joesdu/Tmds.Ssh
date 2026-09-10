@@ -6,4 +6,8 @@ namespace Tmds.Ssh;
 interface IPacketDecryptor : IDisposable
 {
     bool TryDecrypt(Sequence receiveBuffer, uint sequenceNumber, int maxLength, out Packet packet);
+
+    // Starts decompressing when compression was delayed until after user authentication ('zlib@openssh.com').
+    void EnableDelayedCompression()
+    { }
 }

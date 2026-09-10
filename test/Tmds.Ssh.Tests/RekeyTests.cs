@@ -12,10 +12,20 @@ public class RekeyTests
         _sshServer = sshServer;
     }
 
-    [Fact]
-    public async Task HandlesServerInitiatedRekey()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task HandlesServerInitiatedRekey(bool useCompression)
     {
-        using var client = await _sshServer.CreateClientAsync();
+        // Compression state is reset on each key exchange.
+        using var client = await _sshServer.CreateClientAsync(settings =>
+        {
+            if (useCompression)
+            {
+                settings.CompressionAlgorithmsClientToServer = [ "zlib@openssh.com", "none" ];
+                settings.CompressionAlgorithmsServerToClient = [ "zlib@openssh.com", "none" ];
+            }
+        });
 
         // Use cat to echo back what we write
         using var process = await client.ExecuteAsync("cat");

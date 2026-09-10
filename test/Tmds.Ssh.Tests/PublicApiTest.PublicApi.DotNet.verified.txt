@@ -567,6 +567,8 @@ namespace Tmds.Ssh
         public Tmds.Ssh.BannerHandler? BannerHandler { get; set; }
         public bool BatchMode { get; set; }
         public Tmds.Ssh.AlgorithmList? ClientKeyAlgorithms { get; set; }
+        public Tmds.Ssh.AlgorithmList CompressionAlgorithmsClientToServer { get; set; }
+        public Tmds.Ssh.AlgorithmList CompressionAlgorithmsServerToClient { get; set; }
         public System.TimeSpan ConnectTimeout { get; set; }
         public System.Collections.Generic.List<Tmds.Ssh.Credential> Credentials { get; set; }
         public int DefaultWindowSize { get; set; }
@@ -633,6 +635,7 @@ namespace Tmds.Ssh
         CertificateFile = 27,
         PasswordAuthentication = 28,
         BatchMode = 29,
+        Compression = 30,
     }
     public readonly struct SshConfigOptionValue
     {

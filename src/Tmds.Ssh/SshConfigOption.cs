@@ -162,5 +162,10 @@ public enum SshConfigOption
     /// <summary>
     /// Disable user interaction such as password prompts and host key confirmation requests.
     /// </summary>
-    BatchMode
+    BatchMode,
+
+    /// <summary>
+    /// Whether to compress the data that is sent over the connection.
+    /// </summary>
+    Compression
 }

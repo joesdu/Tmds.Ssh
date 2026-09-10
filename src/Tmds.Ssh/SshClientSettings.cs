@@ -593,7 +593,11 @@ public sealed partial class SshClientSettings
     /// <summary>
     /// Gets or sets the permitted compression algorithms for client to server communication in order of preference.
     /// </summary>
-    internal AlgorithmList CompressionAlgorithmsClientToServer
+    /// <remarks>
+    /// By default only <c>none</c> is permitted, which means the packets are not compressed.
+    /// Compression is enabled by including <c>zlib@openssh.com</c> (which starts compressing after authentication) or <c>zlib</c>.
+    /// </remarks>
+    public AlgorithmList CompressionAlgorithmsClientToServer
     {
         get => _compressionAlgorithmsClientToServer ??= new AlgorithmList(DefaultCompressionAlgorithms);
         set => _compressionAlgorithmsClientToServer = value;
@@ -602,7 +606,11 @@ public sealed partial class SshClientSettings
     /// <summary>
     /// Gets or sets the permitted compression algorithms for server to client communication in order of preference.
     /// </summary>
-    internal AlgorithmList CompressionAlgorithmsServerToClient
+    /// <remarks>
+    /// By default only <c>none</c> is permitted, which means the packets are not compressed.
+    /// Compression is enabled by including <c>zlib@openssh.com</c> (which starts compressing after authentication) or <c>zlib</c>.
+    /// </remarks>
+    public AlgorithmList CompressionAlgorithmsServerToClient
     {
         get => _compressionAlgorithmsServerToClient ??= new AlgorithmList(DefaultCompressionAlgorithms);
         set => _compressionAlgorithmsServerToClient = value;

@@ -55,6 +55,12 @@ static class ThrowHelper
         throw new ProtocolException("The packet MAC is incorrect.");
     }
 
+    [DoesNotReturn]
+    public static void ThrowProtocolCompressionError(string message)
+    {
+        throw new ProtocolException($"Compression error: {message}.");
+    }
+
     public static void ThrowProtocolPacketTooLong()
     {
         throw new ProtocolException("Packet is too long.");

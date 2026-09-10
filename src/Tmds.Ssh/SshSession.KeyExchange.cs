@@ -36,6 +36,8 @@ sealed partial class SshSession
 
         var encC2SAlg = PacketEncryptionAlgorithm.Find(encC2S);
         var encS2CAlg = PacketEncryptionAlgorithm.Find(encS2C);
+        var comC2SAlg = PacketCompressionAlgorithm.Find(comC2S);
+        var comS2CAlg = PacketCompressionAlgorithm.Find(comS2C);
 
         if ((!encC2SAlg.IsAuthenticated && macC2S.IsEmpty) ||
             (!encS2CAlg.IsAuthenticated && macS2C.IsEmpty))
@@ -151,6 +153,16 @@ sealed partial class SshSession
 
         IPacketEncryptor encryptor = encC2SAlg.CreatePacketEncryptor(keyExchangeOutput.EncryptionKeyC2S, keyExchangeOutput.InitialIVC2S, hmacC2SAlg, keyExchangeOutput.IntegrityKeyC2S);
         IPacketDecryptor decryptor = encS2CAlg.CreatePacketDecryptor(sequencePool, keyExchangeOutput.EncryptionKeyS2C, keyExchangeOutput.InitialIVS2C, hmacS2CAlg, keyExchangeOutput.IntegrityKeyS2C);
+
+        // Compression is applied to the payload before it gets encrypted.
+        if (comC2SAlg is not null)
+        {
+            encryptor = comC2SAlg.CreatePacketEncryptor(encryptor, sequencePool, context.IsAuthenticated);
+        }
+        if (comS2CAlg is not null)
+        {
+            decryptor = comS2CAlg.CreatePacketDecryptor(decryptor, sequencePool, context.IsAuthenticated);
+        }
 
         // Strict key exchange.
         if (context.NegotiateStrictKex)
@@ -299,7 +311,8 @@ sealed partial class SshSession
             LanguagesServerToClient = _settings.LanguagesServerToClient,
             HostKeyAuthentication = hostKeyAuthentication,
             MinimumRSAKeySize = _settings.MinimumRSAKeySize,
-            CASignatureAlgorithms = _settings.ServerHostKeyCertificateAlgorithmsOrDefault
+            CASignatureAlgorithms = _settings.ServerHostKeyCertificateAlgorithmsOrDefault,
+            IsAuthenticated = _isAuthenticated
         };
     }
 

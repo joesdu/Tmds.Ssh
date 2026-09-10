@@ -218,6 +218,12 @@ sealed class StreamSshConnection : SshConnection
         await _stream.WriteAsync(Encoding.UTF8.GetBytes(line), ct).ConfigureAwait(false);
     }
 
+    public override void EnableDelayedCompression()
+    {
+        _encryptor.EnableDelayedCompression();
+        _decryptor.EnableDelayedCompression();
+    }
+
     public override void SetEncryptorDecryptor(IPacketEncryptor packetEncoder, IPacketDecryptor packetDecoder, bool resetSequenceNumbers, bool throwIfReceiveSNZero)
     {
         _encryptor?.Dispose();

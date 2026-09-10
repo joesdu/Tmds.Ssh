@@ -52,6 +52,8 @@ static class KnownNameStrings
     internal const string ClientExtensionNegotiation = "ext-info-c";
     internal const string ForwardTcpIp = "forwarded-tcpip";
     internal const string ForwardStreamLocal = "forwarded-streamlocal@openssh.com";
+    internal const string ZLib = "zlib";
+    internal const string ZLibOpenSsh = "zlib@openssh.com";
 
     public static string? FindKnownName(ReadOnlySpan<char> name)
     {
@@ -107,6 +109,8 @@ static class KnownNameStrings
             case ClientExtensionNegotiation: return ClientExtensionNegotiation;
             case ForwardTcpIp: return ForwardTcpIp;
             case ForwardStreamLocal: return ForwardStreamLocal;
+            case ZLib: return ZLib;
+            case ZLibOpenSsh: return ZLibOpenSsh;
             default: return null;
         }
     }

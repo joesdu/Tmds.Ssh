@@ -92,6 +92,8 @@ sealed class KeyExchangeContext
     public required List<Name> LanguagesServerToClient { get; init; }
     public required IHostKeyAuthentication HostKeyAuthentication { get; init; }
     public required int MinimumRSAKeySize { get; init; }
+    // Whether the user is authenticated. Compression that is delayed until after authentication starts immediately when rekeying.
+    public required bool IsAuthenticated { get; init; }
     public bool IsInitialKex { get; }
 
     // Unconditionally enable strict key exchange on the first key exchange as described in https://github.com/openssh/openssh-portable/blob/master/PROTOCOL.
