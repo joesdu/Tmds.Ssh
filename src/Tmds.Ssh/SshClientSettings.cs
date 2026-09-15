@@ -595,7 +595,7 @@ public sealed partial class SshClientSettings
     /// </summary>
     /// <remarks>
     /// By default only <c>none</c> is permitted, which means the packets are not compressed.
-    /// Compression is enabled by including <c>zlib@openssh.com</c> (which starts compressing after authentication) or <c>zlib</c>.
+    /// Compression is enabled by including <c>zlib@openssh.com</c>, which starts compressing after authentication.
     /// </remarks>
     public AlgorithmList CompressionAlgorithmsClientToServer
     {
@@ -608,7 +608,7 @@ public sealed partial class SshClientSettings
     /// </summary>
     /// <remarks>
     /// By default only <c>none</c> is permitted, which means the packets are not compressed.
-    /// Compression is enabled by including <c>zlib@openssh.com</c> (which starts compressing after authentication) or <c>zlib</c>.
+    /// Compression is enabled by including <c>zlib@openssh.com</c>, which starts compressing after authentication.
     /// </remarks>
     public AlgorithmList CompressionAlgorithmsServerToClient
     {

@@ -83,6 +83,7 @@ Message authentication code algorithms:
 - none
 
 Compression algorithms:
+- zlib@openssh.com
 - none
 
 Authentication algorithms:

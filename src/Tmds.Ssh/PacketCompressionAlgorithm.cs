@@ -5,19 +5,15 @@ namespace Tmds.Ssh;
 
 sealed class PacketCompressionAlgorithm
 {
+    private PacketCompressionAlgorithm()
+    { }
+
     // 'zlib@openssh.com' only starts compressing after the user has authenticated.
-    private readonly bool _delayCompression;
-
-    private PacketCompressionAlgorithm(bool delayCompression)
-    {
-        _delayCompression = delayCompression;
-    }
-
     public IPacketEncryptor CreatePacketEncryptor(IPacketEncryptor encryptor, SequencePool sequencePool, bool isAuthenticated)
-        => new ZLibPacketEncryptor(encryptor, sequencePool, delayCompression: _delayCompression && !isAuthenticated);
+        => new ZLibPacketEncryptor(encryptor, sequencePool, delayCompression: !isAuthenticated);
 
     public IPacketDecryptor CreatePacketDecryptor(IPacketDecryptor decryptor, SequencePool sequencePool, bool isAuthenticated)
-        => new ZLibPacketDecryptor(decryptor, sequencePool, delayCompression: _delayCompression && !isAuthenticated);
+        => new ZLibPacketDecryptor(decryptor, sequencePool, delayCompression: !isAuthenticated);
 
     // Returns null when the packets are not compressed.
     public static PacketCompressionAlgorithm? Find(Name name)
@@ -26,13 +22,9 @@ sealed class PacketCompressionAlgorithm
         {
             return null;
         }
-        else if (name == AlgorithmNames.ZLib)
-        {
-            return new PacketCompressionAlgorithm(delayCompression: false);
-        }
         else if (name == AlgorithmNames.ZLibOpenSsh)
         {
-            return new PacketCompressionAlgorithm(delayCompression: true);
+            return new PacketCompressionAlgorithm();
         }
 
         throw new NotSupportedException($"Compression algorithm '{name}' is not supported.");
