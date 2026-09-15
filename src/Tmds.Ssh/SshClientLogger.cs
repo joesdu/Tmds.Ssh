@@ -359,6 +359,48 @@ static partial class SshClientLogger
         Message = "Skipping environment variable '{Name}'")]
     public static partial void SkipEnvironmentVariable(this ILogger<SshClient> logger, string name);
 
+    [LoggerMessage(
+        EventId = 41,
+        Level = LogLevel.Warning,
+        Message = "X11 forwarding setup failed")]
+    public static partial void X11ForwardingSetupFailed(this ILogger<SshClient> logger, Exception exception);
+
+    [LoggerMessage(
+        EventId = 42,
+        Level = LogLevel.Warning,
+        Message = "X11 forwarding request failed")]
+    public static partial void X11ForwardingRequestFailed(this ILogger<SshClient> logger);
+
+    [LoggerMessage(
+        EventId = 43,
+        Level = LogLevel.Information,
+        Message = "No X11 authentication data for display '{Display}' in '{XAuthorityFilePath}', using fake authentication data")]
+    public static partial void X11NoAuthenticationData(this ILogger<SshClient> logger, string display, string xauthorityFilePath);
+
+    [LoggerMessage(
+        EventId = 44,
+        Level = LogLevel.Warning,
+        Message = "Rejected X11 connection from '{SourceEndPoint}': {Reason}")]
+    public static partial void X11ConnectionRejected(this ILogger<SshClient> logger, string sourceEndPoint, string reason);
+
+    [LoggerMessage(
+        EventId = 45,
+        Level = LogLevel.Information,
+        Message = "Forwarding X11 connection from '{SourceEndPoint}' to display '{Display}'")]
+    public static partial void X11ConnectionForward(this ILogger<SshClient> logger, string sourceEndPoint, string display);
+
+    [LoggerMessage(
+        EventId = 46,
+        Level = LogLevel.Information,
+        Message = "Closed X11 connection from '{SourceEndPoint}' to display '{Display}'")]
+    public static partial void X11ConnectionClosed(this ILogger<SshClient> logger, string sourceEndPoint, string display);
+
+    [LoggerMessage(
+        EventId = 47,
+        Level = LogLevel.Error,
+        Message = "Aborted X11 connection from '{SourceEndPoint}' to display '{Display}'")]
+    public static partial void X11ConnectionAborted(this ILogger<SshClient> logger, string sourceEndPoint, string? display, Exception exception);
+
     struct PacketPayload // TODO: implement ISpanFormattable
     {
         private static readonly int MaxDataLength = 2 * PrettyBytePrinter.BytesPerLine;

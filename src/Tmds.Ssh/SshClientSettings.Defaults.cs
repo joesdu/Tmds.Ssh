@@ -60,6 +60,10 @@ partial class SshClientSettings
 
     private static int DefaultKeepAliveCountMax => 3;
 
+    internal static TimeSpan DefaultForwardX11Timeout => TimeSpan.FromMinutes(20);
+
+    internal const string DefaultXAuthLocation = "xauth";
+
     // Algorithms are in **order of preference**.
     private readonly static List<Name> EmptyList = [];
     internal readonly static List<Name> SupportedKeyExchangeAlgorithms = [AlgorithmNames.MLKem768X25519Sha256, AlgorithmNames.SNtruP761X25519Sha512, AlgorithmNames.SNtruP761X25519Sha512OpenSsh, AlgorithmNames.Curve25519Sha256, AlgorithmNames.Curve25519Sha256LibSsh, AlgorithmNames.EcdhSha2Nistp256, AlgorithmNames.EcdhSha2Nistp384, AlgorithmNames.EcdhSha2Nistp521];

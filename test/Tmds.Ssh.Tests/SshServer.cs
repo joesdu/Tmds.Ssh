@@ -187,9 +187,22 @@ public class SshServer : IDisposable
 
         static int PickFreePort(IPAddress interfaceAddress)
         {
-            using var s = new Socket(interfaceAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            s.Bind(new IPEndPoint(interfaceAddress, 0));
-            return (s.LocalEndPoint as IPEndPoint)!.Port;
+            // Pick a port below the dynamic port range (49152+) because Docker Desktop on Windows
+            // may fail to publish ports from that range.
+            const int MinPort = 20000;
+            const int MaxPort = 40000;
+            while (true)
+            {
+                int port = Random.Shared.Next(MinPort, MaxPort);
+                using var s = new Socket(interfaceAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                try
+                {
+                    s.Bind(new IPEndPoint(interfaceAddress, port));
+                    return port;
+                }
+                catch (SocketException)
+                { }
+            }
         }
 
         string WriteKnownHostsFile(string host, int port)

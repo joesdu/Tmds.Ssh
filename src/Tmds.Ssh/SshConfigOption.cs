@@ -162,5 +162,25 @@ public enum SshConfigOption
     /// <summary>
     /// Disable user interaction such as password prompts and host key confirmation requests.
     /// </summary>
-    BatchMode
+    BatchMode,
+
+    /// <summary>
+    /// Whether X11 connections are forwarded for remote processes.
+    /// </summary>
+    ForwardX11,
+
+    /// <summary>
+    /// Whether remote X11 clients have full access to the local X11 display.
+    /// </summary>
+    ForwardX11Trusted,
+
+    /// <summary>
+    /// Timeout for untrusted X11 forwarding. X11 connections received after this time are refused.
+    /// </summary>
+    ForwardX11Timeout,
+
+    /// <summary>
+    /// Path of the xauth program.
+    /// </summary>
+    XAuthLocation
 }

@@ -34,6 +34,7 @@ sealed partial class SshSession
     private int _keepAliveMax;
     private int _keepAliveCount;
     private Dictionary<ListenAddress, RemoteListenerInfo>? _remoteListeners;
+    private X11Forwarding? _x11Forwarding;
 
     record struct ListenAddress(Name ForwardType, string Address, ushort Port)
     { }
@@ -50,6 +51,11 @@ sealed partial class SshSession
     private ILogger<SshClient> Logger => _loggers.SshClientLogger;
 
     public SshConnectionInfo ConnectionInfo { get; }
+
+    // Available once connected.
+    internal SshClientSettings Settings => _settings ?? throw new InvalidOperationException("Not connected.");
+
+    internal SshLoggers Loggers => _loggers;
 
     internal SshSession(
         SshClientSettings? settings,
@@ -638,6 +644,30 @@ sealed partial class SshSession
             string path = reader.ReadUtf8String();
             listenAddress = new ListenAddress(channelType, path, 0);
         }
+        else if (channelType == AlgorithmNames.X11)
+        {
+            /*
+                string    originator address (e.g., "192.168.7.38")
+                uint32    originator port
+            */
+            string originatorAddress = reader.ReadUtf8String();
+            uint originatorPort = reader.ReadUInt32();
+
+            X11Forwarding? x11Forwarding;
+            lock (_gate)
+            {
+                x11Forwarding = _x11Forwarding;
+            }
+
+            // Only accept X11 channels when we've requested X11 forwarding.
+            if (x11Forwarding?.HasTargets == true)
+            {
+                SshChannel channel = CreateChannel(typeof(SshDataStream), windowSize: null, onAbort: null, remoteChannel, checked((int)maxPacketSize), checked((int)initialWindowSize));
+                channel.TrySendChannelOpenConfirmationMessage(remoteChannel);
+                x11Forwarding.HandleConnection(new SshDataStream(channel), originatorAddress, originatorPort);
+                return;
+            }
+        }
 
         if (listenAddress != default)
         {
@@ -896,7 +926,7 @@ sealed partial class SshSession
         }
     }
 
-    public async Task OpenSessionAsync(SshChannel channel, ExecuteOptions? options, CancellationToken cancellationToken)
+    public async Task OpenSessionAsync(SshChannel channel, ExecuteOptions? options, CancellationToken cancellationToken, bool inheritX11Settings = true)
     {
         Debug.Assert(_settings is not null);
 
@@ -912,6 +942,13 @@ sealed partial class SshSession
             term = options.TerminalType;
             channel.TrySendChannelPtyRequestMessage(term, options.TerminalWidth, options.TerminalHeight, options.GetTerminalModeString());
             await channel.ReceiveChannelRequestSuccessAsync("Failed to allocate pseudoterminal.", cancellationToken).ConfigureAwait(false);
+        }
+
+        bool? forwardX11 = options?.ForwardX11;
+        if (forwardX11 ?? (inheritX11Settings && _settings.ForwardX11))
+        {
+            // When X11 forwarding is enabled through the settings, failures don't fail the operation.
+            await RequestX11ForwardingAsync(channel, isRequired: forwardX11 == true, cancellationToken).ConfigureAwait(false);
         }
 
         await SetEnvironmentVariablesAsync(_settings.EnvironmentVariablesOrDefault).ConfigureAwait(false);
@@ -983,19 +1020,51 @@ sealed partial class SshSession
     }
 
     public async Task<ISshChannel> OpenSftpClientChannelAsync(Action<SshChannel> onAbort, int? windowSize, CancellationToken cancellationToken)
-        => await OpenSubsystemChannelAsync(typeof(SftpChannel), onAbort, "sftp", options: null, windowSize, cancellationToken).ConfigureAwait(false);
+        => await OpenSubsystemChannelAsync(typeof(SftpChannel), onAbort, "sftp", options: null, windowSize, inheritX11Settings: false, cancellationToken).ConfigureAwait(false);
 
     public async Task<ISshChannel> OpenRemoteSubsystemChannelAsync(Type channelType, string subsystem, ExecuteOptions? options, CancellationToken cancellationToken)
-        => await OpenSubsystemChannelAsync(channelType, null, subsystem, options, windowSize: null, cancellationToken).ConfigureAwait(false);
+        => await OpenSubsystemChannelAsync(channelType, null, subsystem, options, windowSize: null, inheritX11Settings: true, cancellationToken).ConfigureAwait(false);
 
-    private async Task<ISshChannel> OpenSubsystemChannelAsync(Type channelType, Action<SshChannel>? onAbort, string subsystem, ExecuteOptions? options, int? windowSize, CancellationToken cancellationToken)
+    private async Task RequestX11ForwardingAsync(SshChannel channel, bool isRequired, CancellationToken cancellationToken)
+    {
+        Debug.Assert(_settings is not null);
+
+        X11Forwarding x11Forwarding;
+        lock (_gate)
+        {
+            x11Forwarding = _x11Forwarding ??= new X11Forwarding(Logger, _abortCts.Token);
+        }
+
+        X11Forwarding.Target target;
+        try
+        {
+            target = await x11Forwarding.GetTargetAsync(_settings, cancellationToken).ConfigureAwait(false);
+        }
+        catch (SshOperationException ex) when (!isRequired)
+        {
+            Logger.X11ForwardingSetupFailed(ex);
+            return;
+        }
+
+        channel.TrySendX11RequestMessage(X11Forwarding.AuthenticationProtocol, target.FakeCookieHex, target.Display.ScreenNumber);
+        try
+        {
+            await channel.ReceiveChannelRequestSuccessAsync("Failed to request X11 forwarding.", cancellationToken).ConfigureAwait(false);
+        }
+        catch (SshChannelException) when (!isRequired)
+        {
+            Logger.X11ForwardingRequestFailed();
+        }
+    }
+
+    private async Task<ISshChannel> OpenSubsystemChannelAsync(Type channelType, Action<SshChannel>? onAbort, string subsystem, ExecuteOptions? options, int? windowSize, bool inheritX11Settings, CancellationToken cancellationToken)
     {
         Debug.Assert(_settings is not null);
 
         SshChannel channel = CreateChannel(channelType, windowSize ?? options?.WindowSize, onAbort);
         try
         {
-            await OpenSessionAsync(channel, options, cancellationToken).ConfigureAwait(false);
+            await OpenSessionAsync(channel, options, cancellationToken, inheritX11Settings).ConfigureAwait(false);
 
             // Request subsystem execution.
             {

@@ -70,6 +70,10 @@ sealed class SshConfigParser
     public int? ServerAliveCountMax { get; set; }
     public int? ServerAliveInterval { get; set; }
     public string? ProxyJump { get; set; }
+    public bool? ForwardX11 { get; set; }
+    public bool? ForwardX11Trusted { get; set; }
+    public int? ForwardX11Timeout { get; set; } // seconds
+    public string? XAuthLocation { get; set; }
 
     internal static void CollectHosts(string filePath, string includeBasePath, HashSet<string> hosts)
     {
@@ -514,12 +518,25 @@ sealed class SshConfigParser
             case "clearallforwardings":
                 ThrowUnsupportedWhenKeywordValueIsNot(keyword, ref remainder, "no");
                 break;
+            case "forwardx11":
+                config.ForwardX11 ??= ParseYesNoKeywordValue(keyword, ref remainder);
+                break;
+            case "forwardx11trusted":
+                config.ForwardX11Trusted ??= ParseYesNoKeywordValue(keyword, ref remainder);
+                break;
+            case "forwardx11timeout":
+                config.ForwardX11Timeout ??= NextTokenAsTimeInSeconds(keyword, ref remainder);
+                break;
+            case "xauthlocation":
+                if (config.XAuthLocation is null)
+                {
+                    ReadOnlySpan<char> value = GetKeywordValue(keyword, ref remainder);
+                    config.XAuthLocation = TildeExpand(value);
+                }
+                break;
             case "dynamicforward":
             case "exitonforwardfailure":
             case "forwardagent":
-            case "forwardx11":
-            case "forwardx11timeout":
-            case "forwardx11trusted":
             case "gatewayports":
             case "localforward":
             case "permitremoteopen":
@@ -735,6 +752,70 @@ sealed class SshConfigParser
             throw new InvalidDataException($"Can not parse value '{r}' for keyword '{keyword}' as integer.");
         }
         return i;
+    }
+
+    private static int NextTokenAsTimeInSeconds(scoped ReadOnlySpan<char> keyword, ref ReadOnlySpan<char> remainder)
+    {
+        ReadOnlySpan<char> value = GetKeywordValue(keyword, ref remainder);
+        if (!TryParseTimeInSeconds(value, out int seconds))
+        {
+            throw new InvalidDataException($"Can not parse value '{value}' for keyword '{keyword}' as time interval.");
+        }
+        return seconds;
+    }
+
+    // Parses the ssh_config time format: a sequence of numbers optionally followed by a unit (s: seconds, m: minutes, h: hours, d: days, w: weeks).
+    internal static bool TryParseTimeInSeconds(ReadOnlySpan<char> value, out int seconds)
+    {
+        seconds = 0;
+        if (value.IsEmpty)
+        {
+            return false;
+        }
+
+        long total = 0;
+        while (!value.IsEmpty)
+        {
+            int digitCount = 0;
+            while (digitCount < value.Length && char.IsAsciiDigit(value[digitCount]))
+            {
+                digitCount++;
+            }
+            if (digitCount == 0 ||
+                !long.TryParse(value.Slice(0, digitCount), NumberStyles.None, CultureInfo.InvariantCulture, out long number))
+            {
+                return false;
+            }
+            value = value.Slice(digitCount);
+
+            long multiplier = 1;
+            if (!value.IsEmpty && !char.IsAsciiDigit(value[0]))
+            {
+                multiplier = char.ToLowerInvariant(value[0]) switch
+                {
+                    's' => 1,
+                    'm' => 60,
+                    'h' => 60 * 60,
+                    'd' => 24 * 60 * 60,
+                    'w' => 7 * 24 * 60 * 60,
+                    _ => 0
+                };
+                if (multiplier == 0)
+                {
+                    return false;
+                }
+                value = value.Slice(1);
+            }
+
+            if (number > (int.MaxValue - total) / multiplier)
+            {
+                return false;
+            }
+            total += number * multiplier;
+        }
+
+        seconds = (int)total;
+        return true;
     }
 
     private static string TildeExpand(ReadOnlySpan<char> path)

@@ -8,7 +8,7 @@ EXPOSE 88/tcp
 EXPOSE 88/udp
 
 # Install packages.
-RUN dnf install -y krb5-{libs,server,workstation} openssh-server passwd socat dos2unix && \
+RUN dnf install -y krb5-{libs,server,workstation} openssh-server passwd socat dos2unix xorg-x11-xauth && \
     rm -rf /var/cache/yum/*
 
 # Add a user.
@@ -46,6 +46,8 @@ RUN rm /etc/ssh/sshd_config.d/40-redhat-crypto-policies.conf
 RUN echo 'PerSourcePenaltyExemptList "0.0.0.0/0,::/0"' > /etc/ssh/sshd_config.d/99-no-per-source-penalty.conf
 # Accept TEST_ENVVAR.
 RUN echo 'AcceptEnv TEST_ENVVAR' > /etc/ssh/sshd_config.d/99-accept-envvar.conf
+# Enable X11 forwarding.
+RUN echo 'X11Forwarding yes' > /etc/ssh/sshd_config.d/99-x11-forwarding.conf
 
 # Send a banner during user authentication.
 RUN printf 'Authorized use only.\nSecond line of the banner.\n' > /etc/ssh/test_banner && \

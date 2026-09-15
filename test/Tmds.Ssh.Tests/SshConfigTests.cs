@@ -396,6 +396,76 @@ public class SshConfigTests
     }
 
     [Fact]
+    public async Task X11Forwarding()
+    {
+        const string Config =
+        $"""
+        ForwardX11 yes
+        ForwardX11Trusted yes
+        ForwardX11Timeout 1h30m
+        XAuthLocation /opt/X11/bin/xauth
+        ForwardX11 no
+        ForwardX11Timeout 5
+        """;
+        SshConfigParser config = await DetermineConfigAsync(Config);
+
+        Assert.Equal(true, config.ForwardX11);
+        Assert.Equal(true, config.ForwardX11Trusted);
+        Assert.Equal(5400, config.ForwardX11Timeout);
+        Assert.Equal("/opt/X11/bin/xauth", config.XAuthLocation);
+    }
+
+    [Fact]
+    public async Task X11ForwardingSettings()
+    {
+        var configSettings = new SshConfigSettings()
+        {
+            ConfigFilePaths = [],
+            Options =
+            {
+                [SshConfigOption.ForwardX11] = "yes",
+                [SshConfigOption.ForwardX11Trusted] = "yes",
+                [SshConfigOption.ForwardX11Timeout] = "5m",
+                [SshConfigOption.XAuthLocation] = "/usr/local/bin/xauth",
+            }
+        };
+
+        SshClientSettings settings = await SshClientSettings.LoadFromConfigAsync(userName: null, "host", port: null, configSettings);
+
+        Assert.True(settings.ForwardX11);
+        Assert.True(settings.ForwardX11Trusted);
+        Assert.Equal(TimeSpan.FromMinutes(5), settings.ForwardX11Timeout);
+        Assert.Equal("/usr/local/bin/xauth", settings.XAuthLocation);
+    }
+
+    [Theory]
+    [InlineData("0", 0)]
+    [InlineData("90", 90)]
+    [InlineData("90s", 90)]
+    [InlineData("10m", 600)]
+    [InlineData("1h30m", 5400)]
+    [InlineData("2d", 172800)]
+    [InlineData("1w", 604800)]
+    [InlineData("1H1M1S", 3661)]
+    public void ParseTimeInSeconds(string value, int expected)
+    {
+        Assert.True(SshConfigParser.TryParseTimeInSeconds(value, out int seconds));
+        Assert.Equal(expected, seconds);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("m")]
+    [InlineData("10x")]
+    [InlineData("-1")]
+    [InlineData("99999999999")]
+    [InlineData("100000w")]
+    public void ParseTimeInSecondsInvalid(string value)
+    {
+        Assert.False(SshConfigParser.TryParseTimeInSeconds(value, out _));
+    }
+
+    [Fact]
     public void DetermineEnvironment()
     {
         List<string> sendEnv = [ "FOO", "BAR*" ];

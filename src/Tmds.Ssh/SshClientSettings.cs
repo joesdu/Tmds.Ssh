@@ -29,6 +29,8 @@ public sealed partial class SshClientSettings
     private AlgorithmList? _compressionAlgorithmsServerToClient;
     private AlgorithmList? _caSignatureAlgorithms;
     private int _defaultWindowSize = Constants.DefaultWindowSize;
+    private TimeSpan _forwardX11Timeout = DefaultForwardX11Timeout;
+    private string _xauthLocation = DefaultXAuthLocation;
 
     // Avoid allocations from the public getters.
     internal IReadOnlyList<Credential> CredentialsOrDefault
@@ -509,6 +511,71 @@ public sealed partial class SshClientSettings
             _defaultWindowSize = value;
         }
     }
+
+    /// <summary>
+    /// Gets or sets whether to request X11 forwarding for remote processes.
+    /// </summary>
+    /// <remarks>
+    /// <para>Defaults to <see langword="false"/>. This can be overridden per remote process using <see cref="ExecuteOptions.ForwardX11"/>.</para>
+    /// <para>When X11 forwarding can not be set up, the failure is logged and the remote process is started without X11 forwarding.</para>
+    /// </remarks>
+    public bool ForwardX11 { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets whether remote X11 clients have full access to the local X11 display.
+    /// </summary>
+    /// <remarks>
+    /// <para>Defaults to <see langword="false"/>.</para>
+    /// <para>When <see langword="true"/>, the authentication data for the display is read from the Xauthority file (<c>XAUTHORITY</c>, or <c>~/.Xauthority</c>).
+    /// When there is no authentication data, fake authentication data is used, which may be accepted by X servers that don't require authentication.</para>
+    /// <para>When <see langword="false"/>, <see cref="XAuthLocation"/> is used to generate untrusted authentication data that is subject to X11 SECURITY extension restrictions.</para>
+    /// </remarks>
+    public bool ForwardX11Trusted { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the timeout for untrusted X11 forwarding.
+    /// </summary>
+    /// <remarks>
+    /// <para>Defaults to 20 minutes. X11 connections received after this time are refused. <see cref="TimeSpan.Zero"/> disables the timeout.</para>
+    /// <para>This only applies when <see cref="ForwardX11Trusted"/> is <see langword="false"/>.</para>
+    /// </remarks>
+    public TimeSpan ForwardX11Timeout
+    {
+        get => _forwardX11Timeout;
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(value, TimeSpan.Zero);
+            _forwardX11Timeout = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the local X11 display that X11 connections are forwarded to.
+    /// </summary>
+    /// <remarks>
+    /// Defaults to <see langword="null"/> which means the <c>DISPLAY</c> environment variable is used.
+    /// </remarks>
+    public string? X11Display { get; set; }
+
+    /// <summary>
+    /// Gets or sets the path of the xauth program.
+    /// </summary>
+    /// <remarks>
+    /// <para>Defaults to <c>xauth</c> which is looked up using <c>PATH</c>.</para>
+    /// <para>xauth is used to generate authentication data when <see cref="ForwardX11Trusted"/> is <see langword="false"/>.</para>
+    /// </remarks>
+    public string XAuthLocation
+    {
+        get => _xauthLocation;
+        set
+        {
+            ArgumentException.ThrowIfNullOrEmpty(value);
+            _xauthLocation = value;
+        }
+    }
+
+    // For testing.
+    internal string? XAuthorityFilePath { get; set; }
 
     /// <summary>
     /// Gets or sets the minimum RSA key size accepted for authentication.
