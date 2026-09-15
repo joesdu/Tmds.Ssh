@@ -16,10 +16,36 @@ public class CompressionTests
     }
 
     [Fact]
+    public async Task ConnectWithCompressionEnabled()
+    {
+        // Enabling compression is all that is needed, the default algorithms include 'zlib@openssh.com'.
+        using var _ = await _sshServer.CreateClientAsync(
+            settings => settings.EnableCompression = true
+        );
+    }
+
+    [Fact]
+    public async Task CompressionAlgorithmsAreNotUsedWhenCompressionIsNotEnabled()
+    {
+        // The algorithms are not used, so an algorithm the server doesn't support doesn't prevent connecting.
+        using var _ = await _sshServer.CreateClientAsync(
+            settings =>
+            {
+                settings.CompressionAlgorithmsClientToServer = [ "dummy-algorithm" ];
+                settings.CompressionAlgorithmsServerToClient = [ "dummy-algorithm" ];
+            }
+        );
+    }
+
+    [Fact]
     public async Task ConnectWithCompressionClientToServer()
     {
         using var _ = await _sshServer.CreateClientAsync(
-            settings => settings.CompressionAlgorithmsClientToServer = [ ServerCompressionAlgorithm, "none" ]
+            settings =>
+            {
+                settings.EnableCompression = true;
+                settings.CompressionAlgorithmsClientToServer = [ ServerCompressionAlgorithm, "none" ];
+            }
         );
     }
 
@@ -27,7 +53,11 @@ public class CompressionTests
     public async Task ConnectWithCompressionServerToClient()
     {
         using var _ = await _sshServer.CreateClientAsync(
-            settings => settings.CompressionAlgorithmsServerToClient = [ ServerCompressionAlgorithm, "none" ]
+            settings =>
+            {
+                settings.EnableCompression = true;
+                settings.CompressionAlgorithmsServerToClient = [ ServerCompressionAlgorithm, "none" ];
+            }
         );
     }
 
@@ -37,6 +67,7 @@ public class CompressionTests
         using var _ = await _sshServer.CreateClientAsync(
             settings =>
             {
+                settings.EnableCompression = true;
                 settings.CompressionAlgorithmsClientToServer = [ "dummy-algorithm", ServerCompressionAlgorithm, "none" ];
                 settings.CompressionAlgorithmsServerToClient = [ "dummy-algorithm", ServerCompressionAlgorithm, "none" ];
             }
@@ -48,7 +79,11 @@ public class CompressionTests
     {
         await Assert.ThrowsAnyAsync<SshConnectionException>(() =>
             _sshServer.CreateClientAsync(
-                settings => settings.CompressionAlgorithmsClientToServer = [ "dummy-algorithm" ]
+                settings =>
+                {
+                    settings.EnableCompression = true;
+                    settings.CompressionAlgorithmsClientToServer = [ "dummy-algorithm" ];
+                }
             ));
     }
 
@@ -142,6 +177,7 @@ public class CompressionTests
         => _sshServer.CreateClientAsync(
             settings =>
             {
+                settings.EnableCompression = true;
                 settings.CompressionAlgorithmsClientToServer = [ ServerCompressionAlgorithm, "none" ];
                 settings.CompressionAlgorithmsServerToClient = [ ServerCompressionAlgorithm, "none" ];
             }

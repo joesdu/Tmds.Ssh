@@ -82,7 +82,7 @@ Encryption algorithms:
 Message authentication code algorithms:
 - none
 
-Compression algorithms:
+Compression algorithms (only used when <xref:Tmds.Ssh.SshClientSettings.EnableCompression> is set):
 - zlib@openssh.com
 - none
 
