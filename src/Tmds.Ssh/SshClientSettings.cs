@@ -542,10 +542,11 @@ public sealed partial class SshClientSettings
     /// Gets or sets whether to request X11 forwarding for remote processes.
     /// </summary>
     /// <remarks>
-    /// <para>Defaults to <see langword="false"/>. This can be overridden per remote process using <see cref="ExecuteOptions.ForwardX11"/>.</para>
-    /// <para>When X11 forwarding can not be set up, the failure is logged and the remote process is started without X11 forwarding.</para>
+    /// <para>Defaults to <see cref="ForwardMode.Off"/>. This can be overridden per remote process using <see cref="ExecuteOptions.ForwardX11"/>.</para>
+    /// <para>When set to <see cref="ForwardMode.Request"/>, X11 setup failures are logged and the remote process is started without X11 forwarding.</para>
+    /// <para>When set to <see cref="ForwardMode.Require"/>, X11 setup failures fail the operation.</para>
     /// </remarks>
-    public bool ForwardX11 { get; set; } = false;
+    public ForwardMode ForwardX11 { get; set; } = ForwardMode.Off;
 
     /// <summary>
     /// Gets or sets whether remote X11 clients have full access to the local X11 display.

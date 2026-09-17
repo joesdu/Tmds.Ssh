@@ -297,7 +297,7 @@ public class X11ForwardingTests
             settings.XAuthorityFilePath = xauthorityFile.Path;
         });
 
-        using var process = await client.ExecuteAsync(CreateX11ClientCommand(useServerCookie: true), new ExecuteOptions() { ForwardX11 = true });
+        using var process = await client.ExecuteAsync(CreateX11ClientCommand(useServerCookie: true), new ExecuteOptions() { ForwardX11 = ForwardMode.Require });
         Task<byte[]> acceptTask = xServer.AcceptAndReplyAsync("hello"u8.ToArray());
         (string stdout, string stderr) = await process.ReadToEndAsStringAsync();
 
@@ -318,7 +318,7 @@ public class X11ForwardingTests
             settings.XAuthorityFilePath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         });
 
-        using var process = await client.ExecuteAsync(CreateX11ClientCommand(useServerCookie: false), new ExecuteOptions() { ForwardX11 = true });
+        using var process = await client.ExecuteAsync(CreateX11ClientCommand(useServerCookie: false), new ExecuteOptions() { ForwardX11 = ForwardMode.Require });
         (string stdout, string stderr) = await process.ReadToEndAsStringAsync();
 
         Assert.True(stdout == "", $"stdout: '{stdout}', stderr: '{stderr}'");
@@ -326,11 +326,11 @@ public class X11ForwardingTests
     }
 
     [Theory]
-    [InlineData(true, null, true)]
-    [InlineData(true, false, false)]
-    [InlineData(false, null, false)]
-    [InlineData(false, true, true)]
-    public async Task ForwardX11SettingAndOption(bool settingsForwardX11, bool? optionsForwardX11, bool expectDisplay)
+    [InlineData(ForwardMode.Request, null, true)]
+    [InlineData(ForwardMode.Request, ForwardMode.Off, false)]
+    [InlineData(ForwardMode.Off, null, false)]
+    [InlineData(ForwardMode.Off, ForwardMode.Require, true)]
+    public async Task ForwardX11SettingAndOption(ForwardMode settingsForwardX11, ForwardMode? optionsForwardX11, bool expectDisplay)
     {
         using var client = await _sshServer.CreateClientAsync(settings =>
         {
@@ -359,11 +359,11 @@ public class X11ForwardingTests
     {
         using var client = await _sshServer.CreateClientAsync(settings =>
         {
-            settings.ForwardX11 = true;
+            settings.ForwardX11 = ForwardMode.Request;
             settings.X11Display = "invalid";
         });
 
-        await Assert.ThrowsAsync<SshOperationException>(() => client.ExecuteAsync("echo", new ExecuteOptions() { ForwardX11 = true }));
+        await Assert.ThrowsAsync<SshOperationException>(() => client.ExecuteAsync("echo", new ExecuteOptions() { ForwardX11 = ForwardMode.Require }));
 
         // When enabled through the settings, the process starts without X11 forwarding.
         using var process = await client.ExecuteAsync("echo \"${DISPLAY:-none}\"");
@@ -381,7 +381,7 @@ public class X11ForwardingTests
             settings.XAuthLocation = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), "xauth");
         });
 
-        var exception = await Assert.ThrowsAsync<SshOperationException>(() => client.ExecuteAsync("echo", new ExecuteOptions() { ForwardX11 = true }));
+        var exception = await Assert.ThrowsAsync<SshOperationException>(() => client.ExecuteAsync("echo", new ExecuteOptions() { ForwardX11 = ForwardMode.Require }));
         Assert.NotNull(exception.InnerException);
     }
 

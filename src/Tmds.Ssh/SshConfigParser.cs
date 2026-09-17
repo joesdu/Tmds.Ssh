@@ -72,7 +72,7 @@ sealed class SshConfigParser
     public string? ProxyJump { get; set; }
     public bool? ForwardAgent { get; set; }
     public string? ForwardAgentAddress { get; set; }
-    public bool? ForwardX11 { get; set; }
+    public ForwardMode? ForwardX11 { get; set; }
     public bool? ForwardX11Trusted { get; set; }
     public int? ForwardX11Timeout { get; set; } // seconds
     public string? XAuthLocation { get; set; }
@@ -546,7 +546,7 @@ sealed class SshConfigParser
                 break;
             }
             case "forwardx11":
-                config.ForwardX11 ??= ParseYesNoKeywordValue(keyword, ref remainder);
+                config.ForwardX11 ??= ParseForwardX11KeywordValue(keyword, ref remainder);
                 break;
             case "forwardx11trusted":
                 config.ForwardX11Trusted ??= ParseYesNoKeywordValue(keyword, ref remainder);
@@ -754,6 +754,13 @@ sealed class SshConfigParser
             ThrowUnsupportedKeywordValue(keyword, value);
             return false; // unreachable
         }
+    }
+
+    private static ForwardMode ParseForwardX11KeywordValue(scoped ReadOnlySpan<char> keyword, ref ReadOnlySpan<char> remainder)
+    {
+        // OpenSSH supports 'yes'/'no'. 'yes' maps to Request (log and continue on failure),
+        // like SshClientSettings.ForwardX11 = ForwardMode.Request.
+        return ParseYesNoKeywordValue(keyword, ref remainder) ? ForwardMode.Request : ForwardMode.Off;
     }
 
     private static void ThrowUnsupportedWhenKeywordValueIsNot(scoped ReadOnlySpan<char> keyword, ref ReadOnlySpan<char> remainder, ReadOnlySpan<char> expected)

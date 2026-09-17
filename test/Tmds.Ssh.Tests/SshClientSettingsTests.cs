@@ -39,7 +39,7 @@ public class ClientSettingsTests
         Assert.Equal(Array.Empty<Name>(), settings.LanguagesServerToClient);
         Assert.Equal(3, settings.KeepAliveCountMax);
         Assert.Equal(TimeSpan.Zero, settings.KeepAliveInterval);
-        Assert.False(settings.ForwardX11);
+        Assert.Equal(ForwardMode.Off, settings.ForwardX11);
         Assert.False(settings.ForwardX11Trusted);
         Assert.Equal(TimeSpan.FromMinutes(20), settings.ForwardX11Timeout);
         Assert.Null(settings.X11Display);

@@ -147,11 +147,11 @@ public sealed class ExecuteOptions
     /// </summary>
     /// <remarks>
     /// <para>When <see langword="null"/> (the default), <see cref="SshClientSettings.ForwardX11"/> is used.</para>
-    /// <para>When set to <see langword="true"/>, the operation fails when X11 forwarding can not be set up.
-    /// When X11 forwarding is enabled through <see cref="SshClientSettings.ForwardX11"/>, failures are logged and the remote process is started without X11 forwarding.</para>
+    /// <para>When set to <see cref="ForwardMode.Request"/>, X11 setup failures are logged and the remote process is started without X11 forwarding.
+    /// When set to <see cref="ForwardMode.Require"/>, X11 setup failures fail the operation.</para>
     /// <para>The forwarded display and authentication are configured using <see cref="SshClientSettings.X11Display"/>, <see cref="SshClientSettings.ForwardX11Trusted"/>, <see cref="SshClientSettings.ForwardX11Timeout"/>, and <see cref="SshClientSettings.XAuthLocation"/>.</para>
     /// </remarks>
-    public bool? ForwardX11 { get; set; }
+    public ForwardMode? ForwardX11 { get; set; }
 
     /// <summary>
     /// Gets or sets the SSH channel window size in bytes.

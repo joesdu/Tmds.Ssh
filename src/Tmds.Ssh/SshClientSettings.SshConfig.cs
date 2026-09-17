@@ -60,7 +60,7 @@ partial class SshClientSettings
             ForwardAgent = sshConfig.ForwardAgent ?? false,
             ForwardAgentAddress = sshConfig.ForwardAgentAddress,
             BannerHandler = options.BannerHandler,
-            ForwardX11 = sshConfig.ForwardX11 ?? false,
+            ForwardX11 = sshConfig.ForwardX11 ?? ForwardMode.Off,
             ForwardX11Trusted = sshConfig.ForwardX11Trusted ?? false,
             ForwardX11Timeout = sshConfig.ForwardX11Timeout.HasValue ? TimeSpan.FromSeconds(sshConfig.ForwardX11Timeout.Value) : DefaultForwardX11Timeout,
             XAuthLocation = sshConfig.XAuthLocation ?? DefaultXAuthLocation

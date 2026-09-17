@@ -412,7 +412,7 @@ public class SshConfigTests
         """;
         SshConfigParser config = await DetermineConfigAsync(Config);
 
-        Assert.Equal(true, config.ForwardX11);
+        Assert.Equal(ForwardMode.Request, config.ForwardX11);
         Assert.Equal(true, config.ForwardX11Trusted);
         Assert.Equal(5400, config.ForwardX11Timeout);
         Assert.Equal("/opt/X11/bin/xauth", config.XAuthLocation);
@@ -435,7 +435,7 @@ public class SshConfigTests
 
         SshClientSettings settings = await SshClientSettings.LoadFromConfigAsync(userName: null, "host", port: null, configSettings);
 
-        Assert.True(settings.ForwardX11);
+        Assert.Equal(ForwardMode.Request, settings.ForwardX11);
         Assert.True(settings.ForwardX11Trusted);
         Assert.Equal(TimeSpan.FromMinutes(5), settings.ForwardX11Timeout);
         Assert.Equal("/usr/local/bin/xauth", settings.XAuthLocation);

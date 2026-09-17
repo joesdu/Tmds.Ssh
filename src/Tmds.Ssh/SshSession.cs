@@ -36,7 +36,7 @@ sealed partial class SshSession
     private Dictionary<ListenAddress, RemoteListenerInfo>? _remoteListeners;
     private string? _forwardAgentAddress;  // Address of the agent to forward, or 'null' when agent forwarding is disabled.
     private X11Forwarding? _x11Forwarding;
-    private static readonly ExecuteOptions NoX11ForwardingOptions = new() { ForwardX11 = false }; // Used for the sftp subsystem, which doesn't need X11 forwarding.
+    private static readonly ExecuteOptions NoX11ForwardingOptions = new() { ForwardX11 = ForwardMode.Off }; // Used for the sftp subsystem, which doesn't need X11 forwarding.
 
     record struct ListenAddress(Name ForwardType, string Address, ushort Port)
     { }
@@ -1090,11 +1090,10 @@ sealed partial class SshSession
             await channel.ReceiveChannelRequestSuccessAsync("Failed to allocate pseudoterminal.", cancellationToken).ConfigureAwait(false);
         }
 
-        bool? forwardX11 = options?.ForwardX11;
-        if (forwardX11 ?? _settings.ForwardX11)
+        ForwardMode forwardX11 = options?.ForwardX11 ?? _settings.ForwardX11;
+        if (forwardX11 != ForwardMode.Off)
         {
-            // When X11 forwarding is enabled through the settings, failures don't fail the operation.
-            await RequestX11ForwardingAsync(channel, isRequired: forwardX11 == true, cancellationToken).ConfigureAwait(false);
+            await RequestX11ForwardingAsync(channel, isRequired: forwardX11 == ForwardMode.Require, cancellationToken).ConfigureAwait(false);
         }
 
         await SetEnvironmentVariablesAsync(_settings.EnvironmentVariablesOrDefault).ConfigureAwait(false);
