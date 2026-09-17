@@ -59,7 +59,6 @@ partial class SshClientSettings
             BatchMode = sshConfig.BatchMode ?? false,
             ForwardAgent = sshConfig.ForwardAgent ?? false,
             ForwardAgentAddress = sshConfig.ForwardAgentAddress,
-            BannerHandler = options.BannerHandler
             BannerHandler = options.BannerHandler,
             ForwardX11 = sshConfig.ForwardX11 ?? false,
             ForwardX11Trusted = sshConfig.ForwardX11Trusted ?? false,
