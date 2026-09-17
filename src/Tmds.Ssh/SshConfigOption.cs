@@ -165,6 +165,11 @@ public enum SshConfigOption
     BatchMode,
 
     /// <summary>
+    /// Forward the SSH agent to the server.
+    /// </summary>
+    ForwardAgent,
+
+    /// <summary>
     /// Whether to compress the data that is sent over the connection.
     /// </summary>
     Compression

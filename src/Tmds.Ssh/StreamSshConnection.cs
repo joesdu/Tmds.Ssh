@@ -14,6 +14,16 @@ sealed class StreamSshConnection : SshConnection
     private static ReadOnlySpan<byte> NewLine => new byte[] { (byte)'\r', (byte)'\n' };
 
     private readonly ILogger<SshClient> _logger;
+
+    public Stream InnerStream
+    {
+        get
+        {
+            // Check no data was buffered past the last protocol exchange that would be lost by bypassing the connection.
+            Debug.Assert(_receiveBuffer.AsReadOnlySequence().IsEmpty);
+            return _stream;
+        }
+    }
     private readonly Stream _stream;
     private readonly Sequence _receiveBuffer;
     private readonly Sequence _sendBuffer;

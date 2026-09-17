@@ -344,6 +344,8 @@ When using <xref:Tmds.Ssh.SshConfigSettings>, the <xref:Tmds.Ssh.SshConfigSettin
 | `DefaultWindowSize` | 2 MB | SSH channel window size; larger values improve throughput on high-latency or high-bandwidth links at the cost of memory. It can be overridden per operation using `SftpClientOptions`, `ExecuteOptions`, or a `windowSize` method argument. |
 | `EnableBatchModeWhenConsoleIsRedirected` | `true` | Automatically enable batch mode when the console is redirected. |
 | `EnvironmentVariables` | | Environment variables set for all remote processes. |
+| `ForwardAgent` | `false` | Forward the local SSH agent to the server. |
+| `ForwardAgentAddress` | | Address of the SSH agent to forward. When unset, the default SSH agent is used. |
 | `KeepAliveCountMax` | 3 | Max keep-alive messages before disconnecting. |
 | `KeepAliveInterval` | `TimeSpan.Zero` | Interval between SSH keep-alive messages. |
 | `MinimumRSAKeySize` | 2048 | Minimum RSA key size accepted. |
