@@ -33,6 +33,7 @@ public class SshConfigTests
     ServerAliveCountMax 7
     ServerAliveInterval 20
     IdentitiesOnly yes
+    ForwardAgent yes
 
     # !!! update SupportedSettingsAlternateConfig when adding values here !!!
     """;
@@ -63,6 +64,7 @@ public class SshConfigTests
     ServerAliveCountMax 8
     ServerAliveInterval 30
     IdentitiesOnly no
+    ForwardAgent no
     """;
 
     [Fact]
@@ -112,6 +114,7 @@ public class SshConfigTests
         Assert.Equal(7, config.ServerAliveCountMax);
         Assert.Equal(20, config.ServerAliveInterval);
         Assert.Equal(true, config.IdentitiesOnly);
+        Assert.Equal(true, config.ForwardAgent);
     }
 
     [Fact]
@@ -483,6 +486,15 @@ public class SshConfigTests
         };
 
         Assert.Equal(expected, SshClientSettings.CreateEnvironmentVariables(environment, sendEnv));
+    }
+
+    [Fact]
+    public async Task ForwardAgentAddress()
+    {
+        // The value may be a path to the agent socket.
+        SshConfigParser config = await DetermineConfigAsync("ForwardAgent /tmp/my_agent.sock");
+        Assert.Equal(true, config.ForwardAgent);
+        Assert.Equal("/tmp/my_agent.sock", config.ForwardAgentAddress);
     }
 
     private static async Task<SshConfigParser> DetermineConfigAsync(string config, string? username = null, string host = "", int? port = null, CancellationToken cancellationToken = default)

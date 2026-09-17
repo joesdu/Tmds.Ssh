@@ -69,6 +69,7 @@ static class AlgorithmNames
     // Channel types
     public static Name ForwardTcpIp => Name.FromKnownNameString(KnownNameStrings.ForwardTcpIp);
     public static Name ForwardStreamLocal => Name.FromKnownNameString(KnownNameStrings.ForwardStreamLocal);
+    public static Name AuthAgent => Name.FromKnownNameString(KnownNameStrings.AuthAgent);
     public static Name X11 => Name.FromKnownNameString(KnownNameStrings.X11);
 
     // For GetSignatureAlgorithmsForKeyType

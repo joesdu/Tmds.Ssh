@@ -70,6 +70,8 @@ sealed class SshConfigParser
     public int? ServerAliveCountMax { get; set; }
     public int? ServerAliveInterval { get; set; }
     public string? ProxyJump { get; set; }
+    public bool? ForwardAgent { get; set; }
+    public string? ForwardAgentAddress { get; set; }
     public bool? ForwardX11 { get; set; }
     public bool? ForwardX11Trusted { get; set; }
     public int? ForwardX11Timeout { get; set; } // seconds
@@ -518,6 +520,31 @@ sealed class SshConfigParser
             case "clearallforwardings":
                 ThrowUnsupportedWhenKeywordValueIsNot(keyword, ref remainder, "no");
                 break;
+            case "forwardagent":
+            {
+                if (config.ForwardAgent is null)
+                {
+                    ReadOnlySpan<char> value = GetKeywordValue(keyword, ref remainder);
+                    if (value.Equals("no", StringComparison.OrdinalIgnoreCase))
+                    {
+                        config.ForwardAgent = false;
+                    }
+                    else if (value.Equals("yes", StringComparison.OrdinalIgnoreCase))
+                    {
+                        config.ForwardAgent = true;
+                    }
+                    else
+                    {
+                        // The value is the path of the agent socket.
+                        // TODO: the value may also be the name of an environment variable (prefixed
+                        // with '$') that holds that path. We don't support envvar expansion (yet).
+                        string? address = TildeExpand(value);
+                        config.ForwardAgent = !string.IsNullOrEmpty(address);
+                        config.ForwardAgentAddress = string.IsNullOrEmpty(address) ? null : address;
+                    }
+                }
+                break;
+            }
             case "forwardx11":
                 config.ForwardX11 ??= ParseYesNoKeywordValue(keyword, ref remainder);
                 break;
@@ -537,6 +564,9 @@ sealed class SshConfigParser
             case "dynamicforward":
             case "exitonforwardfailure":
             case "forwardagent":
+            case "forwardx11":
+            case "forwardx11timeout":
+            case "forwardx11trusted":
             case "gatewayports":
             case "localforward":
             case "permitremoteopen":

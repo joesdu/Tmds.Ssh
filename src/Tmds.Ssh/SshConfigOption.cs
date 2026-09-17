@@ -165,6 +165,11 @@ public enum SshConfigOption
     BatchMode,
 
     /// <summary>
+    /// Forward the SSH agent to the server.
+    /// </summary>
+    ForwardAgent,
+
+    /// <summary>
     /// Whether X11 connections are forwarded for remote processes.
     /// </summary>
     ForwardX11,

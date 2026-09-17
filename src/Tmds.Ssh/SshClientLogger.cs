@@ -361,42 +361,72 @@ static partial class SshClientLogger
 
     [LoggerMessage(
         EventId = 41,
+        Level = LogLevel.Error,
+        Message = "Failed to handle SSH Agent channel")]
+    public static partial void AgentChannelFailed(this ILogger<SshClient> logger, Exception exception);
+
+    [LoggerMessage(
+        EventId = 42,
+        Level = LogLevel.Information,
+        Message = "SSH Agent did not accept the session bind request. Destination constraints of keys will not apply to this connection.")]
+    public static partial void SshAgentSessionBindFailed(this ILogger<SshClient> logger);
+
+    [LoggerMessage(
+        EventId = 43,
+        Level = LogLevel.Information,
+        Message = "Skipping agent forwarding, cannot connect to SSH agent")]
+    public static partial void SkippingAgentForwarding(this ILogger<SshClient> logger, Exception exception);
+
+    [LoggerMessage(
+        EventId = 44,
+        Level = LogLevel.Information,
+        Message = "Enabling agent forwarding")]
+    public static partial void EnablingAgentForwarding(this ILogger<SshClient> logger);
+
+    [LoggerMessage(
+        EventId = 45,
+        Level = LogLevel.Information,
+        Message = "Forwarding agent channel")]
+    public static partial void ForwardingAgentChannel(this ILogger<SshClient> logger);
+
+    [LoggerMessage(
+        EventId = 46,
         Level = LogLevel.Warning,
         Message = "X11 forwarding setup failed")]
     public static partial void X11ForwardingSetupFailed(this ILogger<SshClient> logger, Exception exception);
 
     [LoggerMessage(
-        EventId = 42,
+        EventId = 47,
         Level = LogLevel.Warning,
         Message = "X11 forwarding request failed")]
     public static partial void X11ForwardingRequestFailed(this ILogger<SshClient> logger);
 
     [LoggerMessage(
-        EventId = 43,
+        EventId = 48,
         Level = LogLevel.Information,
         Message = "No X11 authentication data for display '{Display}' in '{XAuthorityFilePath}', using fake authentication data")]
     public static partial void X11NoAuthenticationData(this ILogger<SshClient> logger, string display, string xauthorityFilePath);
 
     [LoggerMessage(
-        EventId = 44,
+        EventId = 49,
         Level = LogLevel.Warning,
         Message = "Rejected X11 connection from '{SourceEndPoint}': {Reason}")]
     public static partial void X11ConnectionRejected(this ILogger<SshClient> logger, string sourceEndPoint, string reason);
 
     [LoggerMessage(
-        EventId = 45,
+        EventId = 50,
         Level = LogLevel.Information,
         Message = "Forwarding X11 connection from '{SourceEndPoint}' to display '{Display}'")]
     public static partial void X11ConnectionForward(this ILogger<SshClient> logger, string sourceEndPoint, string display);
 
     [LoggerMessage(
-        EventId = 46,
+        EventId = 51,
         Level = LogLevel.Information,
         Message = "Closed X11 connection from '{SourceEndPoint}' to display '{Display}'")]
     public static partial void X11ConnectionClosed(this ILogger<SshClient> logger, string sourceEndPoint, string display);
 
     [LoggerMessage(
-        EventId = 47,
+        EventId = 52,
         Level = LogLevel.Error,
         Message = "Aborted X11 connection from '{SourceEndPoint}' to display '{Display}'")]
     public static partial void X11ConnectionAborted(this ILogger<SshClient> logger, string sourceEndPoint, string? display, Exception exception);

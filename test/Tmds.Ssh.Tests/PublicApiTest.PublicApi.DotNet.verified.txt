@@ -1,4 +1,4 @@
-﻿[assembly: System.Reflection.AssemblyMetadata("IsTrimmable", "True")]
+[assembly: System.Reflection.AssemblyMetadata("IsTrimmable", "True")]
 [assembly: System.Reflection.AssemblyMetadata("RepositoryUrl", "https://github.com/tmds/Tmds.Ssh")]
 namespace Tmds.Ssh
 {
@@ -575,6 +575,8 @@ namespace Tmds.Ssh
         public Tmds.Ssh.AlgorithmList EncryptionAlgorithmsClientToServer { get; set; }
         public Tmds.Ssh.AlgorithmList EncryptionAlgorithmsServerToClient { get; set; }
         public System.Collections.Generic.Dictionary<string, string> EnvironmentVariables { get; set; }
+        public bool ForwardAgent { get; set; }
+        public string? ForwardAgentAddress { get; set; }
         public bool ForwardX11 { get; set; }
         public System.TimeSpan ForwardX11Timeout { get; set; }
         public bool ForwardX11Trusted { get; set; }
@@ -639,10 +641,11 @@ namespace Tmds.Ssh
         CertificateFile = 27,
         PasswordAuthentication = 28,
         BatchMode = 29,
-        ForwardX11 = 30,
-        ForwardX11Trusted = 31,
-        ForwardX11Timeout = 32,
-        XAuthLocation = 33,
+        ForwardAgent = 30,
+        ForwardX11 = 31,
+        ForwardX11Trusted = 32,
+        ForwardX11Timeout = 33,
+        XAuthLocation = 34,
     }
     public readonly struct SshConfigOptionValue
     {
