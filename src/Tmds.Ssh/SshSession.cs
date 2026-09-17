@@ -670,11 +670,9 @@ sealed partial class SshSession
             string originatorAddress = reader.ReadUtf8String();
             uint originatorPort = reader.ReadUInt32();
 
-            X11Forwarding? x11Forwarding;
-            lock (_gate)
-            {
-                x11Forwarding = _x11Forwarding;
-            }
+            // The peer can only open an X11 channel after we requested X11 forwarding,
+            // which assigns the field, so no lock is needed to read it.
+            X11Forwarding? x11Forwarding = _x11Forwarding;
 
             // Only accept X11 channels when we've requested X11 forwarding.
             if (x11Forwarding?.HasTargets == true)
