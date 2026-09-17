@@ -53,11 +53,6 @@ sealed partial class SshSession
 
     public SshConnectionInfo ConnectionInfo { get; }
 
-    // Available once connected.
-    internal SshClientSettings Settings => _settings ?? throw new InvalidOperationException("Not connected.");
-
-    internal SshLoggers Loggers => _loggers;
-
     internal SshSession(
         SshClientSettings? settings,
         string? destination,
