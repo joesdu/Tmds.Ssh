@@ -3,7 +3,6 @@
 
 using System.Buffers.Binary;
 using System.Diagnostics;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
@@ -39,6 +38,7 @@ sealed class X11Forwarding
     private readonly ILogger<SshClient> _logger;
     private readonly CancellationToken _connectionAborting;
     private readonly Lock _gate = new();
+    private readonly SemaphoreSlim _targetSemaphore = new(initialCount: 1); // Serializes GetTargetAsync.
     private readonly List<Target> _targets = new();
 
     public X11Forwarding(ILogger<SshClient> logger, CancellationToken connectionAborting)
@@ -75,51 +75,61 @@ sealed class X11Forwarding
         }
 
         bool isTrusted = settings.ForwardX11Trusted;
-        lock (_gate)
-        {
-            // Connections for expired targets are refused, so they no longer need to be kept.
-            _targets.RemoveAll(target => target.IsExpired);
 
-            foreach (var target in _targets)
+        // Serialize so concurrent calls share a single target instead of each generating authentication data.
+        await _targetSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            lock (_gate)
             {
-                if (target.Display.Name == display.Name && target.IsTrusted == isTrusted && !target.IsExpired)
+                // Connections for expired targets are refused, so they no longer need to be kept.
+                _targets.RemoveAll(target => target.IsExpired);
+
+                foreach (var target in _targets)
                 {
-                    return target;
+                    if (target.Display.Name == display.Name && target.IsTrusted == isTrusted && !target.IsExpired)
+                    {
+                        return target;
+                    }
                 }
             }
-        }
 
-        byte[]? cookie;
-        long refuseTimestamp = 0;
-        if (isTrusted)
-        {
-            string xauthorityFilePath = settings.XAuthorityFilePath ?? XAuthority.GetDefaultFilePath();
-            cookie = await XAuthority.FindCookieAsync(xauthorityFilePath, display, cancellationToken).ConfigureAwait(false);
-            if (cookie is null)
+            byte[]? cookie;
+            long refuseTimestamp = 0;
+            if (isTrusted)
             {
-                // Like OpenSSH, use random data. The X server may accept the connection when it doesn't require authentication.
-                _logger.X11NoAuthenticationData(display.Name, xauthorityFilePath);
-                cookie = RandomNumberGenerator.GetBytes(FakeCookieLength);
+                string xauthorityFilePath = settings.XAuthorityFilePath ?? XAuthority.GetDefaultFilePath();
+                cookie = await XAuthority.FindCookieAsync(xauthorityFilePath, display, cancellationToken).ConfigureAwait(false);
+                if (cookie is null)
+                {
+                    // Like OpenSSH, use random data. The X server may accept the connection when it doesn't require authentication.
+                    _logger.X11NoAuthenticationData(display.Name, xauthorityFilePath);
+                    cookie = RandomNumberGenerator.GetBytes(FakeCookieLength);
+                }
             }
-        }
-        else
-        {
-            TimeSpan timeout = settings.ForwardX11Timeout;
-            try
+            else
             {
-                cookie = await XAuthority.GenerateUntrustedCookieAsync(settings.XAuthLocation, display, timeout, cancellationToken).ConfigureAwait(false);
+                TimeSpan timeout = settings.ForwardX11Timeout;
+                try
+                {
+                    cookie = await XAuthority.GenerateUntrustedCookieAsync(settings.XAuthLocation, display, timeout, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    throw new SshOperationException($"Untrusted X11 forwarding setup failed: can not generate authentication data for display '{display.Name}' using '{settings.XAuthLocation}'.", ex);
+                }
+                if (timeout > TimeSpan.Zero)
+                {
+                    refuseTimestamp = Stopwatch.GetTimestamp() + (long)Math.Min(timeout.TotalSeconds * Stopwatch.Frequency, long.MaxValue / 2);
+                }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                throw new SshOperationException($"Untrusted X11 forwarding setup failed: can not generate authentication data for display '{display.Name}' using '{settings.XAuthLocation}'.", ex);
-            }
-            if (timeout > TimeSpan.Zero)
-            {
-                refuseTimestamp = Stopwatch.GetTimestamp() + (long)Math.Min(timeout.TotalSeconds * Stopwatch.Frequency, long.MaxValue / 2);
-            }
-        }
 
-        return AddTarget(display, isTrusted, cookie, refuseTimestamp);
+            return AddTarget(display, isTrusted, cookie, refuseTimestamp);
+        }
+        finally
+        {
+            _targetSemaphore.Release();
+        }
     }
 
     internal Target AddTarget(X11Display display, bool isTrusted, byte[] cookie, long refuseTimestamp = 0)
@@ -179,25 +189,7 @@ sealed class X11Forwarding
             displayStream = await target.Display.ConnectAsync(_connectionAborting).ConfigureAwait(false);
             await displayStream.WriteAsync(setupMessage, _connectionAborting).ConfigureAwait(false);
 
-            Task first, second;
-            try
-            {
-                Task copy1 = CopyTillEofAsync(channelStream, displayStream, channelStream.ReadMaxPacketDataLength);
-                Task copy2 = CopyTillEofAsync(displayStream, channelStream, channelStream.WriteMaxPacketDataLength);
-
-                first = await Task.WhenAny(copy1, copy2).ConfigureAwait(false);
-                second = first == copy1 ? copy2 : copy1;
-            }
-            finally
-            {
-                // When the copy stops in one direction, stop it in the other direction too.
-                channelStream.Dispose();
-                displayStream.Dispose();
-            }
-            // The dispose will cause the second copy to stop.
-            await second.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-
-            await first.ConfigureAwait(false); // Throws if faulted.
+            await SshSession.ForwardStreamsAsync(channelStream, displayStream).ConfigureAwait(false);
 
             _logger.X11ConnectionClosed(sourceAddress, displayName);
         }
@@ -208,25 +200,16 @@ sealed class X11Forwarding
         }
         catch (Exception ex)
         {
-            _logger.X11ConnectionAborted(sourceAddress, displayName, ex);
+            // Don't log when the connection is aborting.
+            if (!_connectionAborting.IsCancellationRequested)
+            {
+                _logger.X11ConnectionAborted(sourceAddress, displayName, ex);
+            }
         }
         finally
         {
             channelStream.Dispose();
             displayStream?.Dispose();
-        }
-
-        static async Task CopyTillEofAsync(Stream from, Stream to, int bufferSize)
-        {
-            await from.CopyToAsync(to, bufferSize).ConfigureAwait(false);
-            if (to is NetworkStream ns)
-            {
-                ns.Socket.Shutdown(SocketShutdown.Send);
-            }
-            else if (to is SshDataStream ds)
-            {
-                ds.WriteEof();
-            }
         }
     }
 

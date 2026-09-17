@@ -217,7 +217,7 @@ static class XAuthority
 
             if (File.Exists(filePath))
             {
-                foreach (var entry in ParseEntries(File.ReadAllBytes(filePath)))
+                foreach (var entry in ParseEntries(await File.ReadAllBytesAsync(filePath, cancellationToken).ConfigureAwait(false)))
                 {
                     if (entry.Name == MitMagicCookie && entry.Data.Length > 0)
                     {

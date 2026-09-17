@@ -1,4 +1,4 @@
-// This file is part of Tmds.Ssh which is released under MIT.
+﻿// This file is part of Tmds.Ssh which is released under MIT.
 // See file LICENSE for full license details.
 
 using System.Buffers;
@@ -36,6 +36,7 @@ sealed partial class SshSession
     private Dictionary<ListenAddress, RemoteListenerInfo>? _remoteListeners;
     private string? _forwardAgentAddress;  // Address of the agent to forward, or 'null' when agent forwarding is disabled.
     private X11Forwarding? _x11Forwarding;
+    private static readonly ExecuteOptions NoX11ForwardingOptions = new() { ForwardX11 = false }; // Used for the sftp subsystem, which doesn't need X11 forwarding.
 
     record struct ListenAddress(Name ForwardType, string Address, ushort Port)
     { }
@@ -798,7 +799,7 @@ sealed partial class SshSession
     }
 
     // Copies data between two streams until either side stops sending.
-    private static async Task ForwardStreamsAsync(Stream sourceStream, Stream targetStream)
+    internal static async Task ForwardStreamsAsync(Stream sourceStream, Stream targetStream)
     {
         Task first, second;
         try
@@ -1061,7 +1062,7 @@ sealed partial class SshSession
         }
     }
 
-    public async Task OpenSessionAsync(SshChannel channel, ExecuteOptions? options, CancellationToken cancellationToken, bool inheritX11Settings = true)
+    public async Task OpenSessionAsync(SshChannel channel, ExecuteOptions? options, CancellationToken cancellationToken)
     {
         Debug.Assert(_settings is not null);
 
@@ -1090,7 +1091,7 @@ sealed partial class SshSession
         }
 
         bool? forwardX11 = options?.ForwardX11;
-        if (forwardX11 ?? (inheritX11Settings && _settings.ForwardX11))
+        if (forwardX11 ?? _settings.ForwardX11)
         {
             // When X11 forwarding is enabled through the settings, failures don't fail the operation.
             await RequestX11ForwardingAsync(channel, isRequired: forwardX11 == true, cancellationToken).ConfigureAwait(false);
@@ -1165,10 +1166,10 @@ sealed partial class SshSession
     }
 
     public async Task<ISshChannel> OpenSftpClientChannelAsync(Action<SshChannel> onAbort, int? windowSize, CancellationToken cancellationToken)
-        => await OpenSubsystemChannelAsync(typeof(SftpChannel), onAbort, "sftp", options: null, windowSize, inheritX11Settings: false, cancellationToken).ConfigureAwait(false);
+        => await OpenSubsystemChannelAsync(typeof(SftpChannel), onAbort, "sftp", NoX11ForwardingOptions, windowSize, cancellationToken).ConfigureAwait(false);
 
     public async Task<ISshChannel> OpenRemoteSubsystemChannelAsync(Type channelType, string subsystem, ExecuteOptions? options, CancellationToken cancellationToken)
-        => await OpenSubsystemChannelAsync(channelType, null, subsystem, options, windowSize: null, inheritX11Settings: true, cancellationToken).ConfigureAwait(false);
+        => await OpenSubsystemChannelAsync(channelType, null, subsystem, options, windowSize: null, cancellationToken).ConfigureAwait(false);
 
     private async Task RequestX11ForwardingAsync(SshChannel channel, bool isRequired, CancellationToken cancellationToken)
     {
@@ -1202,14 +1203,14 @@ sealed partial class SshSession
         }
     }
 
-    private async Task<ISshChannel> OpenSubsystemChannelAsync(Type channelType, Action<SshChannel>? onAbort, string subsystem, ExecuteOptions? options, int? windowSize, bool inheritX11Settings, CancellationToken cancellationToken)
+    private async Task<ISshChannel> OpenSubsystemChannelAsync(Type channelType, Action<SshChannel>? onAbort, string subsystem, ExecuteOptions? options, int? windowSize, CancellationToken cancellationToken)
     {
         Debug.Assert(_settings is not null);
 
         SshChannel channel = CreateChannel(channelType, windowSize ?? options?.WindowSize, onAbort);
         try
         {
-            await OpenSessionAsync(channel, options, cancellationToken, inheritX11Settings).ConfigureAwait(false);
+            await OpenSessionAsync(channel, options, cancellationToken).ConfigureAwait(false);
 
             // Request subsystem execution.
             {
