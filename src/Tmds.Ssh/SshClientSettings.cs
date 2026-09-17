@@ -433,6 +433,32 @@ public sealed partial class SshClientSettings
     public BannerHandler? BannerHandler { get; set; }
 
     /// <summary>
+    /// Gets or sets whether to forward the SSH agent to the server.
+    /// </summary>
+    /// <remarks>
+    /// <para>Defaults to <see langword="false"/>.</para>
+    /// <para>When enabled, remote processes started through <see cref="SshClient.ExecuteAsync(string, CancellationToken)"/> and
+    /// related methods can use the keys of the local SSH agent to authenticate with other servers.</para>
+    /// <para>The agent channels opened by the server are proxied to the SSH agent identified by <see cref="ForwardAgentAddress"/>.</para>
+    /// <para>Enabling this gives users who can access the agent socket on the server (including the administrator) full control
+    /// over the local agent for the duration of the connection. Besides using keys to authenticate, this includes operations that
+    /// change the agent, like removing keys. Only enable this for servers that are trusted.</para>
+    /// <para>The server may refuse to forward the agent (OpenSSH: <c>AllowAgentForwarding no</c>). Then no agent channels are opened.</para>
+    /// </remarks>
+    public bool ForwardAgent { get; set; } = false;
+
+    /// <summary>
+    /// Gets or sets the address of the SSH agent that is forwarded when <see cref="ForwardAgent"/> is enabled.
+    /// </summary>
+    /// <remarks>
+    /// <para>Defaults to <see langword="null"/>.</para>
+    /// <para><see langword="null"/> and an empty string mean the default SSH agent is forwarded. That is the agent from the
+    /// <c>SSH_AUTH_SOCK</c> environment variable, and on Windows the <c>openssh-ssh-agent</c> named pipe when that variable is not set.</para>
+    /// <para>This is set to the agent specified by the <c>ForwardAgent</c> ssh config option when that option includes an agent address.</para>
+    /// </remarks>
+    public string? ForwardAgentAddress { get; set; }
+
+    /// <summary>
     /// Gets or sets whether to automatically connect when the client is used.
     /// </summary>
     /// <remarks>
