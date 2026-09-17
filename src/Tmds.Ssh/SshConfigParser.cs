@@ -563,10 +563,6 @@ sealed class SshConfigParser
                 break;
             case "dynamicforward":
             case "exitonforwardfailure":
-            case "forwardagent":
-            case "forwardx11":
-            case "forwardx11timeout":
-            case "forwardx11trusted":
             case "gatewayports":
             case "localforward":
             case "permitremoteopen":
