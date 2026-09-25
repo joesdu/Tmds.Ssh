@@ -62,6 +62,7 @@ namespace Tmds.Ssh
         public ExecuteOptions() { }
         public bool AllocateTerminal { get; set; }
         public System.Collections.Generic.Dictionary<string, string> EnvironmentVariables { get; set; }
+        public Tmds.Ssh.ForwardMode? ForwardX11 { get; set; }
         public System.Text.Encoding StandardErrorEncoding { get; set; }
         public System.Text.Encoding StandardInputEncoding { get; set; }
         public System.Text.Encoding StandardOutputEncoding { get; set; }
@@ -90,6 +91,12 @@ namespace Tmds.Ssh
         public Tmds.Ssh.UnixFilePermissions CreatePermissions { get; set; }
         public Tmds.Ssh.OpenMode OpenMode { get; set; }
         public bool Seekable { get; set; }
+    }
+    public enum ForwardMode
+    {
+        Off = 0,
+        Request = 1,
+        Require = 2,
     }
     public delegate System.Threading.Tasks.ValueTask<bool> HostAuthentication(Tmds.Ssh.HostAuthenticationContext context, System.Threading.CancellationToken cancellationToken);
     public struct HostAuthenticationContext
@@ -579,6 +586,9 @@ namespace Tmds.Ssh
         public System.Collections.Generic.Dictionary<string, string> EnvironmentVariables { get; set; }
         public bool ForwardAgent { get; set; }
         public string? ForwardAgentAddress { get; set; }
+        public Tmds.Ssh.ForwardMode ForwardX11 { get; set; }
+        public System.TimeSpan ForwardX11Timeout { get; set; }
+        public bool ForwardX11Trusted { get; set; }
         public System.Collections.Generic.List<string> GlobalKnownHostsFilePaths { get; set; }
         public bool HashKnownHosts { get; set; }
         public Tmds.Ssh.HostAuthentication? HostAuthentication { get; set; }
@@ -597,6 +607,8 @@ namespace Tmds.Ssh
         public bool UpdateKnownHostsFileAfterAuthentication { get; set; }
         public System.Collections.Generic.List<string> UserKnownHostsFilePaths { get; set; }
         public string UserName { get; set; }
+        public string? X11Display { get; set; }
+        public string XAuthLocation { get; set; }
         public static System.Collections.Generic.IReadOnlyList<Tmds.Ssh.Credential> DefaultCredentials { get; }
         public static System.Collections.Generic.IReadOnlyList<string> DefaultGlobalKnownHostsFilePaths { get; }
         public static System.Collections.Generic.IReadOnlyList<string> DefaultUserKnownHostsFilePaths { get; }
@@ -639,7 +651,11 @@ namespace Tmds.Ssh
         PasswordAuthentication = 28,
         BatchMode = 29,
         ForwardAgent = 30,
-        Compression = 31,
+        ForwardX11 = 31,
+        ForwardX11Trusted = 32,
+        ForwardX11Timeout = 33,
+        XAuthLocation = 34,
+        Compression = 35,
     }
     public readonly struct SshConfigOptionValue
     {

@@ -235,6 +235,32 @@ static class SshSequencePoolExtensions
         return packet.Move();
     }
 
+    public static Packet CreateX11RequestMessage(this SequencePool sequencePool, uint remoteChannel, string authenticationProtocol, string authenticationCookie, uint screenNumber)
+    {
+        /*
+            byte      SSH_MSG_CHANNEL_REQUEST
+            uint32    recipient channel
+            string    "x11-req"
+            boolean   want reply
+            boolean   single connection
+            string    x11 authentication protocol
+            string    x11 authentication cookie
+            uint32    x11 screen number
+        */
+
+        using var packet = sequencePool.RentPacket();
+        var writer = packet.GetWriter();
+        writer.WriteMessageId(MessageId.SSH_MSG_CHANNEL_REQUEST);
+        writer.WriteUInt32(remoteChannel);
+        writer.WriteString("x11-req");
+        writer.WriteBoolean(true); // want_reply
+        writer.WriteBoolean(false); // single connection
+        writer.WriteString(authenticationProtocol);
+        writer.WriteString(authenticationCookie);
+        writer.WriteUInt32(screenNumber);
+        return packet.Move();
+    }
+
     public static Packet CreateExecCommandMessage(this SequencePool sequencePool, uint remoteChannel, string command)
     {
         /*
