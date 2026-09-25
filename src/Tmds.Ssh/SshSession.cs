@@ -35,6 +35,8 @@ sealed partial class SshSession
     private int _keepAliveCount;
     private Dictionary<ListenAddress, RemoteListenerInfo>? _remoteListeners;
     private string? _forwardAgentAddress;  // Address of the agent to forward, or 'null' when agent forwarding is disabled.
+    private X11Forwarding? _x11Forwarding;
+    private static readonly ExecuteOptions SftpExecuteOptions = new() { ForwardX11 = ForwardMode.Off }; // Used for the sftp subsystem, which doesn't need X11 forwarding.
 
     record struct ListenAddress(Name ForwardType, string Address, ushort Port)
     { }
@@ -660,6 +662,28 @@ sealed partial class SshSession
                 return;
             }
         }
+        else if (channelType == AlgorithmNames.X11)
+        {
+            /*
+                string    originator address (e.g., "192.168.7.38")
+                uint32    originator port
+            */
+            string originatorAddress = reader.ReadUtf8String();
+            uint originatorPort = reader.ReadUInt32();
+
+            // The peer can only open an X11 channel after we requested X11 forwarding,
+            // which assigns the field, so no lock is needed to read it.
+            X11Forwarding? x11Forwarding = _x11Forwarding;
+
+            // Only accept X11 channels when we've requested X11 forwarding.
+            if (x11Forwarding?.HasAuthBindings == true)
+            {
+                SshChannel channel = CreateChannel(typeof(SshDataStream), windowSize: null, onAbort: null, remoteChannel, checked((int)maxPacketSize), checked((int)initialWindowSize));
+                channel.TrySendChannelOpenConfirmationMessage(remoteChannel);
+                x11Forwarding.HandleConnection(new SshDataStream(channel), originatorAddress, originatorPort, _abortCts.Token);
+                return;
+            }
+        }
 
         if (listenAddress != default)
         {
@@ -735,7 +759,7 @@ sealed partial class SshSession
                     Logger.SshAgentSessionBindFailed();
                 }
 
-                Logger.ForwardingAgentChannel();
+                Logger.AgentForwardConnection();
 
                 SshChannel channel = CreateChannel(typeof(SshDataStream), windowSize: null, onAbort: null, remoteChannel, sendMaxPacket, sendWindow);
                 channel.TrySendChannelOpenConfirmationMessage(remoteChannel);
@@ -743,13 +767,15 @@ sealed partial class SshSession
                 using SshDataStream stream = new SshDataStream(channel);
 
                 await ForwardStreamsAsync(stream, agent.InnerStream).ConfigureAwait(false);
+
+                Logger.AgentForwardConnectionClosed();
             }
         }
         catch (Exception ex)
         {
             if (!ct.IsCancellationRequested)
             {
-                Logger.AgentChannelFailed(ex);
+                Logger.AgentForwardConnectionAborted(ex);
             }
         }
     }
@@ -768,14 +794,14 @@ sealed partial class SshSession
         }
         catch (Exception ex) when (!ct.IsCancellationRequested)
         {
-            Logger.SkippingAgentForwarding(ex);
+            Logger.AgentForwardSetupFailed(ex);
 
             return false;
         }
     }
 
     // Copies data between two streams until either side stops sending.
-    private static async Task ForwardStreamsAsync(Stream sourceStream, Stream targetStream)
+    internal static async Task ForwardStreamsAsync(Stream sourceStream, Stream targetStream)
     {
         Task first, second;
         try
@@ -1051,8 +1077,6 @@ sealed partial class SshSession
         // Only announce agent forwarding when there is an agent we can forward.
         if (_forwardAgentAddress is not null && await CanConnectToForwardAgentAsync(cancellationToken).ConfigureAwait(false))
         {
-            Logger.EnablingAgentForwarding();
-
             // Like 'ssh' we don't wait for a reply.
             // When the server refuses, it will not open any agent channels.
             channel.TrySendAuthAgentRequestMessage();
@@ -1064,6 +1088,12 @@ sealed partial class SshSession
             term = options.TerminalType;
             channel.TrySendChannelPtyRequestMessage(term, options.TerminalWidth, options.TerminalHeight, options.GetTerminalModeString());
             await channel.ReceiveChannelRequestSuccessAsync("Failed to allocate pseudoterminal.", cancellationToken).ConfigureAwait(false);
+        }
+
+        ForwardMode forwardX11 = options?.ForwardX11 ?? _settings.ForwardX11;
+        if (forwardX11 != ForwardMode.Off)
+        {
+            await RequestX11ForwardingAsync(channel, isRequired: forwardX11 == ForwardMode.Require, cancellationToken).ConfigureAwait(false);
         }
 
         await SetEnvironmentVariablesAsync(_settings.EnvironmentVariablesOrDefault).ConfigureAwait(false);
@@ -1135,10 +1165,37 @@ sealed partial class SshSession
     }
 
     public async Task<ISshChannel> OpenSftpClientChannelAsync(Action<SshChannel> onAbort, int? windowSize, CancellationToken cancellationToken)
-        => await OpenSubsystemChannelAsync(typeof(SftpChannel), onAbort, "sftp", options: null, windowSize, cancellationToken).ConfigureAwait(false);
+        => await OpenSubsystemChannelAsync(typeof(SftpChannel), onAbort, "sftp", SftpExecuteOptions, windowSize, cancellationToken).ConfigureAwait(false);
 
     public async Task<ISshChannel> OpenRemoteSubsystemChannelAsync(Type channelType, string subsystem, ExecuteOptions? options, CancellationToken cancellationToken)
         => await OpenSubsystemChannelAsync(channelType, null, subsystem, options, windowSize: null, cancellationToken).ConfigureAwait(false);
+
+    private async Task RequestX11ForwardingAsync(SshChannel channel, bool isRequired, CancellationToken cancellationToken)
+    {
+        Debug.Assert(_settings is not null);
+
+        try
+        {
+            X11Forwarding x11Forwarding;
+            lock (_gate)
+            {
+                x11Forwarding = _x11Forwarding ??= new X11Forwarding(_settings.X11Display, Logger);
+            }
+
+            X11Forwarding.AuthBinding authBinding = await x11Forwarding.GetOrCreateAuthBindingAsync(_settings.ForwardX11Trusted, _settings.XAuthorityFilePath, _settings.XAuthLocation, _settings.ForwardX11Timeout, cancellationToken).ConfigureAwait(false);
+
+            channel.TrySendX11RequestMessage(X11Forwarding.AuthenticationProtocol, authBinding.FakeCookieHex, x11Forwarding.ScreenNumber);
+            await channel.ReceiveChannelRequestSuccessAsync("Failed to request X11 forwarding.", cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Logger.X11ForwardSetupFailed(ex.Message);
+            if (isRequired)
+            {
+                throw ex is SshChannelException ? ex : new SshChannelException("X11 forwarding setup failed.", ex);
+            }
+        }
+    }
 
     private async Task<ISshChannel> OpenSubsystemChannelAsync(Type channelType, Action<SshChannel>? onAbort, string subsystem, ExecuteOptions? options, int? windowSize, CancellationToken cancellationToken)
     {

@@ -345,10 +345,15 @@ When using <xref:Tmds.Ssh.SshConfigSettings>, the <xref:Tmds.Ssh.SshConfigSettin
 | `EnvironmentVariables` | | Environment variables set for all remote processes. |
 | `ForwardAgent` | `false` | Forward the local SSH agent to the server. |
 | `ForwardAgentAddress` | | Address of the SSH agent to forward. When unset, the default SSH agent is used. |
+| `ForwardX11` | `Off` | Whether to forward X11 connections for remote processes. Can be overridden per operation using `ExecuteOptions.ForwardX11`. |
+| `ForwardX11Timeout` | 20 minutes | Timeout for untrusted X11 forwarding. X11 connections received after this time are refused. `TimeSpan.Zero` disables the timeout. |
+| `ForwardX11Trusted` | `false` | Give remote X11 clients full access to the local X11 display. |
 | `KeepAliveCountMax` | 3 | Max keep-alive messages before disconnecting. |
 | `KeepAliveInterval` | `TimeSpan.Zero` | Interval between SSH keep-alive messages. |
 | `MinimumRSAKeySize` | 2048 | Minimum RSA key size accepted. |
 | `TcpKeepAlive` | `true` | Enable TCP keep-alive. |
+| `X11Display` | | Local X11 display that X11 connections are forwarded to. When unset, the `DISPLAY` environment variable is used. |
+| `XAuthLocation` | `xauth` | Path of the xauth program that is used to generate untrusted X11 authentication data. |
 
 ### Jump hosts
 

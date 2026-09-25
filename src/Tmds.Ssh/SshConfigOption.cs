@@ -167,5 +167,25 @@ public enum SshConfigOption
     /// <summary>
     /// Forward the SSH agent to the server.
     /// </summary>
-    ForwardAgent
+    ForwardAgent,
+
+    /// <summary>
+    /// Whether to forward X11 connections.
+    /// </summary>
+    ForwardX11,
+
+    /// <summary>
+    /// Whether to give remote X11 clients full access to the local X11 display.
+    /// </summary>
+    ForwardX11Trusted,
+
+    /// <summary>
+    /// Timeout for untrusted X11 forwarding.
+    /// </summary>
+    ForwardX11Timeout,
+
+    /// <summary>
+    /// Path of the xauth program.
+    /// </summary>
+    XAuthLocation
 }
